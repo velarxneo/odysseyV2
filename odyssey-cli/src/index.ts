@@ -11,7 +11,7 @@ import path from 'path';
 import { Ed25519PrivateKey, Account, Aptos, AptosConfig, Network} from "@aptos-labs/ts-sdk";
 const program = new Command();
 
-program.version('1.3.1');
+program.version('2.0.0');
 
 // Initialize an empty config object
 let config: any = {};

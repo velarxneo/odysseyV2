@@ -1,11 +1,10 @@
 import * as fs from 'fs';
-import { Account, Aptos, InputGenerateTransactionPayloadData, TransactionWorkerEventsEnum, WriteSetChangeWriteResource } from '@aptos-labs/ts-sdk';
+import { Account, Aptos, WriteSetChangeWriteResource } from '@aptos-labs/ts-sdk';
 import { uploadNFT } from "./arweaveUploadFiles";
 import { InputTransactionData } from '@aptos-labs/wallet-adapter-react';
 import path from 'path';
 import { createCanvas, loadImage } from 'canvas';
 import { AptosPriceServiceConnection } from "@pythnetwork/pyth-aptos-js";
-import { Price, PriceFeed } from "@pythnetwork/pyth-common-js";
 
 const moduleAddress = "0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38";
 const moduleAddressName = "0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38::odyssey_v2";

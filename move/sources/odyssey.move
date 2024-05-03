@@ -332,31 +332,40 @@ module minter::odyssey_v2 {
         assert!(option::is_some(stage), ENO_ACTIVE_STAGES);
 
         let mint_data = borrow_mut_mint_data(odyssey_obj);
-
+        
         let price_in_aptos_coin = update_and_fetch_price(minter, vaas);
         
         let old_odyssey_price = 0;
         let new_mint_fee = 0;
 
         let fees = simple_map::borrow_mut(&mut mint_data.fees, &utf8(PRESALE_MINT_STAGE_CATEGORY));
-        let coin_payment = find_fees_by_category(fees, utf8(ODYSSEY_FEE_CATEGORY));
-        old_odyssey_price = coin_payment::amount(coin_payment);
-        coin_payment::set_amount(coin_payment, price_in_aptos_coin);
+            
+        if (check_fees_exist_by_category(fees, utf8(ODYSSEY_FEE_CATEGORY)))
+        {
+            let coin_payment = find_fees_by_category(fees, utf8(ODYSSEY_FEE_CATEGORY));
+            old_odyssey_price = coin_payment::amount(coin_payment);
+            coin_payment::set_amount(coin_payment, price_in_aptos_coin);
 
-        coin_payment = find_fees_by_category(fees, utf8(PRESALE_COIN_PAYMENT_CATEGORY));
-        new_mint_fee = coin_payment::amount(coin_payment) + old_odyssey_price - price_in_aptos_coin;
-        coin_payment::set_amount(coin_payment, new_mint_fee);
+            coin_payment = find_fees_by_category(fees, utf8(PRESALE_COIN_PAYMENT_CATEGORY));
+            new_mint_fee = coin_payment::amount(coin_payment) + old_odyssey_price - price_in_aptos_coin;
+            coin_payment::set_amount(coin_payment, new_mint_fee);
+        };
 
         let public_fees = simple_map::borrow_mut(&mut mint_data.fees, &utf8(PUBLIC_SALE_MINT_STAGE_CATEGORY));
-        coin_payment = find_fees_by_category(public_fees, utf8(ODYSSEY_FEE_CATEGORY));
-        coin_payment::set_amount(coin_payment, price_in_aptos_coin);
 
-        coin_payment = find_fees_by_category(public_fees, utf8(PUBLIC_SALE_COIN_PAYMENT_CATEGORY));
-        new_mint_fee = coin_payment::amount(coin_payment) + old_odyssey_price - price_in_aptos_coin;
-        coin_payment::set_amount(coin_payment, new_mint_fee);
+        if (check_fees_exist_by_category(public_fees, utf8(ODYSSEY_FEE_CATEGORY)))
+        {
+            let coin_payment = find_fees_by_category(public_fees, utf8(ODYSSEY_FEE_CATEGORY));
+            coin_payment::set_amount(coin_payment, price_in_aptos_coin);
 
+            coin_payment = find_fees_by_category(public_fees, utf8(PUBLIC_SALE_COIN_PAYMENT_CATEGORY));
+            new_mint_fee = coin_payment::amount(coin_payment) + old_odyssey_price - price_in_aptos_coin;
+            coin_payment::set_amount(coin_payment, new_mint_fee);
+        };
+       
         let stage_fees = simple_map::borrow(&mut mint_data.fees, option::borrow(stage));
-        
+
+      
         // Take fee payment from `minter` prior to minting
         vector::for_each_ref(stage_fees, |fee| {
             coin_payment::execute(minter, fee)
@@ -482,6 +491,24 @@ module minter::odyssey_v2 {
         assert!(payment_found, ECOIN_PAYMENT_CATEGORY_DOES_NOT_EXIST);
         vector::borrow_mut(fees, index)
     }
+
+    fun check_fees_exist_by_category<T>(fees: &vector<CoinPayment<T>>, category: String): bool {
+        let found = false;
+        let len = vector::length(fees);
+        let i = 0;
+
+        while (i < len) {
+            let payment = vector::borrow(fees, i);
+            if (coin_payment::category(payment) == category) {
+                found = true;
+                break;
+            };
+            i = i + 1;
+        };
+
+        found
+    }
+
 
     public entry fun update_odyssey_mint_data(
         owner: &signer,

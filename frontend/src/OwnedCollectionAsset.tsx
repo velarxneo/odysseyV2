@@ -34,9 +34,15 @@ const OwnedAssetsComponent: React.FC<Props> = ({ accountAddress, collectionAddre
     };
 
     useEffect(() => {
+       
+    const interval = setInterval(() => {
         fetchOwnedAssets();
+      }, 1000); // Polling every 1000ms (1 second)
+    
+      return () => clearInterval(interval); // Cleanup function to clear the interval
     }, [accountAddress, collectionAddress]);
 
+      
     return (
       <div>
       {ownedAssets.map((asset, index) => (
