@@ -66,7 +66,7 @@ module minter::odyssey_v2 {
     // APTOS_USD Mainnet address 
     //const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
 
-    const OdysseyAddress: address = @0x47cf7d8a85e688c8d4aeb7281fc7cb3fdae3ceb2106fbac6ff32a8668c064f66;
+    const OdysseyAddress: address = @0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38;
     const Odyssey_fee: u64 = 10000000;
 
     /// Octas per aptos coin
