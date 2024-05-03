@@ -1,0 +1,30 @@
+[package]
+name = "TokenMinter"
+version = "1.0.0"
+authors = []
+
+[addresses]
+minter = "0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38"
+migration = "0x111" # Will replace when we have an address responsible for migrations.
+# Mock addresses for testing.
+minter_v2 = "0x999"
+
+[dev-addresses]
+minter = "0x123"
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-core.git"
+rev = "main"
+subdir = "aptos-move/framework/aptos-framework"
+
+[dependencies.AptosTokenObjects]
+git = 'https://github.com/aptos-labs/aptos-core.git'
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-token-objects'
+
+[dependencies.AptosToken]
+git = 'https://github.com/aptos-labs/aptos-core.git'
+rev = 'main'
+subdir = 'aptos-move/framework/aptos-token'
+
+[dev-dependencies]

@@ -1,0 +1,42 @@
+{
+    "name": "aptivate-odyssey-sdk",
+    "version": "1.2.6",
+    "description": "",
+    "main": "dist/odysseyClient.js",
+    "scripts": {
+        "build": "webpack --config webpack.config.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^20.11.25",
+        "ts-loader": "^9.5.1",
+        "typescript": "^5.3.3",
+        "webpack": "^5.90.3",
+        "webpack-cli": "^5.1.4"
+    },
+    "dependencies": {
+        "@aptos-labs/ts-sdk": "^1.9.1",
+        "@aptos-labs/wallet-adapter-react": "^2.1.8",
+        "@babel/core": "^7.15.8",
+        "@babel/preset-env": "^7.15.8",
+        "@pythnetwork/pyth-aptos-js": "^1.4.2",
+        "@pythnetwork/pyth-common-js": "^1.4.0",
+        "@saberhq/token-utils": "^1.15.0",
+        "arweave": "^1.14.4",
+        "babel-loader": "^8.2.3",
+        "canvas": "^2.11.2",
+        "crypto": "^1.0.1",
+        "keccak256": "^1.0.6",
+        "merkletreejs": "^0.3.11"
+    },
+    "browser": {
+        "fs": false,
+        "os": false,
+        "path": false,
+        "crypto": false,
+        "console": false
+    }
+}

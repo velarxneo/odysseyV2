@@ -1,0 +1,28 @@
+{
+  "private_key": "0x",
+  "network": "random",
+  "random_trait": "true",
+  "odyssey_name": "Protectors of Love & Freedom",
+  "storage": {
+    "arweave": {
+      "IPFSPath": "https://arweave.net",
+      "keyfilePath": "/kH.json"
+    }
+  },
+  "collection": {
+    "collection_name": "Random Dommies 100",
+    "description": "Dommies are programmatically, randomly generated NFTs on the Ethereum blockchain. The first generation consists of 10,000 randomly assembled rubberheads from over 1.6 million possible permutations.",
+    "cover": "https://arweave.net/zfvkxRpqGLxE9MeWImspoE7fwfGPQ4Oco_TRV_0guXo",
+    "collection_size": 100,
+    "royalty_numerator": 5,
+    "royalty_denominator": 100,
+    "presale_start_time": "0",
+    "presale_end_time": "0",
+    "presale_mint_fee": 20000000,
+    "public_sales_start_time": "2024-03-21T03:06:00Z",
+    "public_sales_end_time": "2024-04-21T00:00:00Z",
+    "public_sales_mint_fee": 30000000,
+    "asset_dir": "/assets",
+    "whitelist_dir_file": "/whitelist/allowlist.json"
+  }
+}
