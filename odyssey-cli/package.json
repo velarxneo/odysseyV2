@@ -1,6 +1,6 @@
 {
   "name": "odyssey-cli",
-  "version": "1.3.8",
+  "version": "2.0.0",
   "description": "A CLI tool for minting NFTs via Aptivate Odyssey SDK",
   "main": "index.js",
   "bin": {
@@ -15,7 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@aptos-labs/ts-sdk": "^1.10.0",
-    "aptivate-odyssey-sdk": "^1.2.6",
+    "aptivate-odyssey-sdk": "^2.0.0",
     "commander": "^12.0.0",
     "inquirer": "^8.0.0",
     "keccak256": "^1.0.6"

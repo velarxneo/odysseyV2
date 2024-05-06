@@ -61,13 +61,13 @@ module minter::odyssey_v2 {
 
     // For the entire list of price_ids head to https://pyth.network/developers/price-feed-ids/#pyth-cross-chain-testnet
     // APTOS_USD Testnet address 
-    const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
+    //const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
 
     // APTOS_USD Mainnet address 
-    //const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
+    const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
 
-    const OdysseyAddress: address = @0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38;
-    const Odyssey_fee: u64 = 10000000;
+    const OdysseyAddress: address = @0x359c05f421b5594350e0040b2ee79a9532d33d207e79bdee6652bcc093b6afd4;
+    const Odyssey_fee: u64 = 20000000;
 
     /// Octas per aptos coin
     const OCTAS_PER_APTOS: u64 = 100000000;
@@ -151,6 +151,7 @@ module minter::odyssey_v2 {
         public_sales_mint_fee: u64,
         public_max_mint: u64,
         royalty_payee_address: address,
+        vaas : vector<vector<u8>>
     ) {
         assert!(
             presale_start_time == 0 ||
@@ -193,8 +194,10 @@ module minter::odyssey_v2 {
             public_sales_mint_fee,
             odyssey_name,
             object::generate_extend_ref(odyssey_constructor_ref),
+            vaas
         );
     }
+    
 
     fun create_stages(
         odyssey_constructor_ref: &ConstructorRef,
@@ -258,14 +261,16 @@ module minter::odyssey_v2 {
         public_sales_mint_fee: u64,
         odyssey_name: String,
         extend_ref: ExtendRef,
+        vaas : vector<vector<u8>>
     ) {
         move_to(odyssey, Odyssey { extend_ref, odyssey_name });
-
+        
         let fees = simple_map::new();
         let presale_fees = create_fees<AptosCoin>(
             owner,
             presale_mint_fee,
             utf8(PRESALE_COIN_PAYMENT_CATEGORY),
+            vaas
         );
         simple_map::add(&mut fees, utf8(PRESALE_MINT_STAGE_CATEGORY), presale_fees);
 
@@ -273,6 +278,7 @@ module minter::odyssey_v2 {
             owner,
             public_sales_mint_fee,
             utf8(PUBLIC_SALE_COIN_PAYMENT_CATEGORY),
+            vaas
         );
         simple_map::add(&mut fees, utf8(PUBLIC_SALE_MINT_STAGE_CATEGORY), public_sale_fees);
 
@@ -292,20 +298,24 @@ module minter::odyssey_v2 {
         owner: &signer,
         mint_fee: u64,
         fee_category: String,
+        vaas : vector<vector<u8>>
     ): vector<CoinPayment<T>> {
         let coin_payments = vector[];
 
         if (mint_fee > 0) {
+
+            let price_in_aptos_coin = update_and_fetch_price(owner, vaas);
+        
             assert!(mint_fee >= Odyssey_fee, EMINT_FEE_NOT_ENOUGH);
 
             let odyssey_fee = coin_payment::create<T>(
-                Odyssey_fee,
+                price_in_aptos_coin,
                 OdysseyAddress,
                 utf8(ODYSSEY_FEE_CATEGORY)
             );
 
             let mint_fee = coin_payment::create<T>(
-                mint_fee - Odyssey_fee,
+                mint_fee - price_in_aptos_coin,
                 signer::address_of(owner),
                 fee_category,
             );
@@ -356,6 +366,7 @@ module minter::odyssey_v2 {
         if (check_fees_exist_by_category(public_fees, utf8(ODYSSEY_FEE_CATEGORY)))
         {
             let coin_payment = find_fees_by_category(public_fees, utf8(ODYSSEY_FEE_CATEGORY));
+            old_odyssey_price = coin_payment::amount(coin_payment);
             coin_payment::set_amount(coin_payment, price_in_aptos_coin);
 
             coin_payment = find_fees_by_category(public_fees, utf8(PUBLIC_SALE_COIN_PAYMENT_CATEGORY));
@@ -365,7 +376,6 @@ module minter::odyssey_v2 {
        
         let stage_fees = simple_map::borrow(&mut mint_data.fees, option::borrow(stage));
 
-      
         // Take fee payment from `minter` prior to minting
         vector::for_each_ref(stage_fees, |fee| {
             coin_payment::execute(minter, fee)
@@ -468,20 +478,44 @@ module minter::odyssey_v2 {
         owner: &signer,
         odyssey_mint_data: Object<OdysseyMintData>,
         fee_category: String,
-        fee: u64,
+        new_fee: u64,
         destination: address,
         category: String,
+        vaas : vector<vector<u8>>
     ) acquires OdysseyMintData {
         let mint_data = authorized_borrow_mut_mint_data(owner, odyssey_mint_data);
-        let fees = simple_map::borrow_mut(&mut mint_data.fees, &fee_category);
-        let odyssey_fee = coin_payment::amount(find_fees_by_category(fees, utf8(ODYSSEY_FEE_CATEGORY)));
 
-        fees = simple_map::borrow_mut(&mut mint_data.fees, &fee_category);
-        let coin_payment = find_fees_by_category(fees, category);
+        let stage_fees = simple_map::borrow_mut(&mut mint_data.fees, &fee_category);
+        let len = vector::length(stage_fees);
+        
+        let i = 0;
 
-        coin_payment::set_amount(coin_payment, fee - odyssey_fee);
-        coin_payment::set_destination(coin_payment, destination);
-        coin_payment::set_category(coin_payment, category);
+        while (i < len) {
+            let coin_payment = vector::remove(stage_fees, 0);
+            coin_payment::destroy(coin_payment);
+            i = i + 1;
+        };
+        
+        if (new_fee > 0) {
+            assert!(new_fee >= Odyssey_fee, EMINT_FEE_NOT_ENOUGH);
+
+            let price_in_aptos_coin = update_and_fetch_price(owner, vaas);
+
+            let odyssey_fee = coin_payment::create(
+                price_in_aptos_coin,
+                OdysseyAddress,
+                utf8(ODYSSEY_FEE_CATEGORY)
+            );
+
+            let new_fee = coin_payment::create(
+                new_fee - price_in_aptos_coin,
+                destination,
+                category,
+            );
+
+            vector::push_back(stage_fees, odyssey_fee);
+            vector::push_back(stage_fees, new_fee);
+        };
     }
 
     fun find_fees_by_category<T>(fees: &mut vector<CoinPayment<T>>, category: String): &mut CoinPayment<T> {
@@ -493,22 +527,12 @@ module minter::odyssey_v2 {
     }
 
     fun check_fees_exist_by_category<T>(fees: &vector<CoinPayment<T>>, category: String): bool {
-        let found = false;
-        let len = vector::length(fees);
-        let i = 0;
+        let (payment_found, index) = vector::find(fees, |payment| {
+            coin_payment::category(payment) == category
+        });
 
-        while (i < len) {
-            let payment = vector::borrow(fees, i);
-            if (coin_payment::category(payment) == category) {
-                found = true;
-                break;
-            };
-            i = i + 1;
-        };
-
-        found
+        payment_found
     }
-
 
     public entry fun update_odyssey_mint_data(
         owner: &signer,
@@ -555,6 +579,7 @@ module minter::odyssey_v2 {
     ) acquires Odyssey, OdysseyMintData {
         let collection = authorized_borrow_mut_mint_data(owner, odyssey_mint_data).collection;
         let royalty = royalty::create(royalty_numerator, royalty_denominator, payee_address);
+        
         collection_components::set_collection_royalties(&odyssey_signer(odyssey_mint_data), collection, royalty);
     }
 
@@ -589,6 +614,24 @@ module minter::odyssey_v2 {
         vector::for_each(traitsConfigList_data.trait_configs, |traitConfig| {
             let TraitConfig { trait_type: _, trait_value: _, probability: _ } = traitConfig;
         });
+    }
+
+     public entry fun repopulate_allowlist(
+        owner: &signer,
+        odyssey: Object<OdysseyMintData>,
+        stage: String,
+        addrs: vector<address>,
+        amounts: vector<u64>,
+    ) {
+        let addrs_length = vector::length(&addrs);
+        assert!(addrs_length == vector::length(&amounts), 0);
+
+        mint_stage::remove_everyone_from_allowlist(owner, odyssey, stage);
+        for (i in 0..addrs_length) {
+            let addr = *vector::borrow(&addrs, i);
+            let amount = *vector::borrow(&amounts, i);
+            mint_stage::add_to_allowlist(owner, odyssey, stage, addr, amount);
+        };
     }
 
     public entry fun add_to_allowlist(

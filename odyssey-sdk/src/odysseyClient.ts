@@ -6,8 +6,8 @@ import path from 'path';
 import { createCanvas, loadImage } from 'canvas';
 import { AptosPriceServiceConnection } from "@pythnetwork/pyth-aptos-js";
 
-const moduleAddress = "0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38";
-const moduleAddressName = "0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38::odyssey_v2";
+const moduleAddress = "0xa8a3cdff3068ee47cb0419cbd93ad1f71bdabb50431fc0f5b971a00c613b13d2";
+const moduleAddressName = "0xa8a3cdff3068ee47cb0419cbd93ad1f71bdabb50431fc0f5b971a00c613b13d2::odyssey_v2";
 const currentFolder = process.cwd();
 const randomizeFolderName = "/randomize";
 const outputFilePath = "/trait_config.json";
@@ -57,6 +57,7 @@ export class OdysseyClient {
     public_max_mint: number,
     random_trait: boolean,
     asset_dir: string,
+    network: string
   ): Promise<string> {
     
     try {
@@ -71,6 +72,9 @@ export class OdysseyClient {
         this.createRandomTraitConfigJSONFile(asset_dir);
       }
       
+      const priceFeedUpdateData  = await getOdysseyPrice(network);
+      
+
       const txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -91,6 +95,7 @@ export class OdysseyClient {
             public_sales_mint_fee,
             public_max_mint,
             account.accountAddress.toStringWithoutPrefix(),
+            priceFeedUpdateData
           ],
         },
       });
@@ -128,7 +133,8 @@ export class OdysseyClient {
     description: string,
     asset_dir: string,
     wallet_json_file_path: string,
-    random_trait: boolean
+    random_trait: boolean,
+    network: string
   ): Promise<string> {
     
     try {
@@ -140,6 +146,8 @@ export class OdysseyClient {
         collectionName: collection_name,
       });
       
+      const priceFeedUpdateData  = await getOdysseyPrice(network);
+      
       const txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -147,7 +155,9 @@ export class OdysseyClient {
           functionArguments: [
             resource_account,
             to_address,
-            tokenURI
+            tokenURI,
+            1,
+            priceFeedUpdateData
           ],
         },
       });
@@ -256,14 +266,15 @@ export class OdysseyClient {
     account_address: string,
     resource_account: string,
     minting_qty: number,   
+    network: string
   ): Promise<InputTransactionData> {
     
     try {
-      console.log("\n=== Retriving Minting  NFT Payload ===\n");
+      console.log("\n=== Retriving Minting NFT Payload ===\n");
       
-      let tokenURI="Update after minting";
+      let tokenURI="";
 
-      const priceFeedUpdateData  = await getOdysseyPrice();
+      const priceFeedUpdateData  = await getOdysseyPrice(network);
             
       const txn: InputTransactionData = {       
         data: {
@@ -368,12 +379,16 @@ export class OdysseyClient {
     account: Account,
     presale_mint_fee: number,
     public_sales_mint_fee: number,
+    network: string
   ): Promise<string[]> {
     
     try {
       console.log("\n=== Updating Payment Information ===\n");
             
       let txHash: string[] = [];
+      let committedTxn;
+      const priceFeedUpdateData  = await getOdysseyPrice(network);
+      
       let txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -383,12 +398,13 @@ export class OdysseyClient {
             PRESALE_MINT_STAGE_CATEGORY,
             presale_mint_fee,
             account.accountAddress,
-            PRESALE_COIN_PAYMENT_CATEGORY
+            PRESALE_COIN_PAYMENT_CATEGORY,
+            priceFeedUpdateData
           ],
         },
       });
     
-      let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });      
+      committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
       
       txHash.push(committedTxn.hash);
@@ -402,7 +418,8 @@ export class OdysseyClient {
             PUBLIC_SALE_MINT_STAGE_CATEGORY,
             public_sales_mint_fee,
             account.accountAddress,
-            PUBLIC_SALE_COIN_PAYMENT_CATEGORY
+            PUBLIC_SALE_COIN_PAYMENT_CATEGORY,
+            priceFeedUpdateData
           ],
         },
       });
@@ -504,8 +521,8 @@ export class OdysseyClient {
     resource_account: string,
     account: Account,
     collection_address: string,
-    royalty_numerator: string,
-    royalty_denominator: string,
+    royalty_numerator: number,
+    royalty_denominator: number,
     payee_address: string,
     
   ): Promise<string> {
@@ -519,7 +536,6 @@ export class OdysseyClient {
           function: `${moduleAddressName}::update_collection_royalties`,
           functionArguments: [
             resource_account,
-            collection_address,
             royalty_numerator,
             royalty_denominator,
             payee_address
@@ -535,7 +551,7 @@ export class OdysseyClient {
       return committedTxn.hash;
 
     } catch (error: any) {
-      throw new Error(`Error updating token URI: ${error.message}`);
+      throw new Error(`Error updating collection royalties: ${error.message}`);
     }
   }
 
@@ -693,7 +709,7 @@ export class OdysseyClient {
       const txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
-          function: `${moduleAddressName}::add_to_allowlist`,
+          function: `${moduleAddressName}::repopulate_allowlist`,
           functionArguments: [
             resource_account,
             PRESALE_MINT_STAGE_CATEGORY,
@@ -716,6 +732,7 @@ export class OdysseyClient {
       return null;
     }
   }
+  
 
   // 1. Call move contract by looping json file and populate onchain trait config:
   //  - This method only needs to be called one time upon json file creation           
@@ -1107,19 +1124,34 @@ async function createMetadataJSON(data: [number, string, string][], collection_n
   }
 }
 
-async function getOdysseyPrice() {
-  const TESTNET_HERMES_ENDPOINT = "https://hermes-beta.pyth.network";
+async function getOdysseyPrice(network: string) {
+
+  let HERMES_ENDPOINT="";
+  let APT_USD_PRICE_ID="";
+
+
+  if (network == "mainnet")
+  {
+    HERMES_ENDPOINT = "https://hermes.pyth.network";
+
+    // Price id : this is not an aptos account but instead an opaque identifier for each price https://pyth.network/developers/price-feed-ids/#pyth-cross-chain-testnet
+    APT_USD_PRICE_ID = "0x03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
+  }
+  else
+  {
+    HERMES_ENDPOINT = "https://hermes-beta.pyth.network";
+
+    // Price id : this is not an aptos account but instead an opaque identifier for each price https://pyth.network/developers/price-feed-ids/#pyth-cross-chain-testnet
+    APT_USD_PRICE_ID = "0x44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
+  }
+
   // Connection
   const testnetConnection = new AptosPriceServiceConnection(
-    TESTNET_HERMES_ENDPOINT
+    HERMES_ENDPOINT
   ); // Price service client used to retrieve the offchain VAAs to update the onchain price
 
-  // Price id : this is not an aptos account but instead an opaque identifier for each price https://pyth.network/developers/price-feed-ids/#pyth-cross-chain-testnet
-  const APT_USD_TESTNET_PRICE_ID =
-    "0x44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
-
   const priceFeedUpdateData = await testnetConnection.getPriceFeedsUpdateData([
-    APT_USD_TESTNET_PRICE_ID,
+    APT_USD_PRICE_ID,
   ]);
 
   return priceFeedUpdateData;

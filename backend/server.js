@@ -1,8 +1,8 @@
 // server.js or app.js
 const { Ed25519PrivateKey, Account, Aptos, AptosConfig, Network } = require("@aptos-labs/ts-sdk");
 
-//const { OdysseyClient } = require('aptivate-odyssey-sdk');
-const { OdysseyClient } = require('../odyssey-sdk/dist/odysseyClient');
+const { OdysseyClient } = require('aptivate-odyssey-sdk');
+//const { OdysseyClient } = require('../odyssey-sdk/dist/odysseyClient');
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
@@ -13,14 +13,11 @@ app.use(cors()); // Enable CORS for all routes
 const odysseyClient = new OdysseyClient();
 
 // Read the config.json file
-
 const configData = fs.readFileSync('./config.json', 'utf-8');
 let config = JSON.parse(configData);
 
-const currentFolder = process.cwd();
-
 const { network, collection, resource_account, storage, private_key, random_trait } = config;
-const { collection_name, description, whitelist_dir_file, asset_dir } = collection;
+const { collection_name, description, asset_dir } = collection;
 
 // Get the keyfilePath from the storage object
 const keyfilePath = storage.arweave.keyfilePath;
@@ -62,30 +59,12 @@ app.get('/api/get-stage', async (req, res) => {
     }
 });
 
-app.get('/api/allocated-qty/:address', (req, res) => {
-    const { address } = req.params;
-    try {
-        const addresses = JSON.parse(fs.readFileSync(currentFolder + whitelist_dir_file, 'utf-8'));
-      
-        const foundAddress = addresses.find(item => item.address === address);
-
-        if (foundAddress) {
-        res.json({ allocatedQty: foundAddress.qty });
-        } else {
-        res.json({ allocatedQty: 0 });
-        }
-    } catch (error) {
-        console.error('Error reading addresses.json:', error.message);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
 app.get('/api/allowlist-balance/:address', async (req, res) => {
     const { address } = req.params;
     try {
         const aptos = getNetwork(network);
         const userBalance = await odysseyClient.getAllowListBalance(aptos, resource_account, address);
-        //console.log("userBalance:" + userBalance);
+        
         if (userBalance) {
         res.json({ balance: userBalance });
         } else {
@@ -102,7 +81,7 @@ app.get('/api/publiclist-balance/:address', async (req, res) => {
     try {
         const aptos = getNetwork(network);
         const userBalance = await odysseyClient.getPublicListBalance(aptos, resource_account, address);
-        //console.log("userBalance:" + userBalance);
+        
         if (userBalance) {
         res.json({ balance: userBalance });
         } else {
@@ -114,65 +93,25 @@ app.get('/api/publiclist-balance/:address', async (req, res) => {
     }
 });
 
-app.get('/api/minted-qty/:address', async (req, res) => {
-    const { address } = req.params;
-    try {
-        const aptos = getNetwork(network);
-
-        const userMintedQty = await odysseyClient.getMintedQty(aptos, resource_account, address);
-        //console.log("Minted Qty:" + userMintedQty);
-        if (userMintedQty) {
-        res.json({ mintedQty: userMintedQty });
-        } else {
-        res.json({ mintedQty: 0 });
-        }
-
-    } catch (error) {
-        console.error('Error reading minted qty:', error.message);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
-app.get('/api/public-minted-qty/:address', async (req, res) => {
-    const { address } = req.params;
-    try {
-        const aptos = getNetwork(network);
-
-        const userMintedQty = await odysseyClient.getPublicMintedQty(aptos, resource_account, address);
-        //console.log("Minted Qty:" + userMintedQty);
-        if (userMintedQty) {
-        res.json({ mintedQty: userMintedQty });
-        } else {
-        res.json({ mintedQty: 0 });
-        }
-
-    } catch (error) {
-        console.error('Error reading minted qty:', error.message);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-});
-
 app.get('/api/get-mint-txn/:address/:mintQty', async (req, res) => {
     const { address, mintQty } = req.params;
     try {
-        const aptos = getNetwork(network);
         const payloads = await odysseyClient.getMintToPayloads(
             address,
             resource_account,
             mintQty,
+            network
         );
         if (payloads) {
             res.json({ payloads: payloads });
         } else {
             res.json({ payloads: "" });
         }
-
     } catch (error) {
         console.error('Error geting mint txn::', error.message);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
-
 
 app.get('/api/update-metadata-image/:tokenNo/:tokenAddress', async (req, res) => {
     const { tokenNo, tokenAddress } = req.params;
@@ -191,8 +130,6 @@ app.get('/api/update-metadata-image/:tokenNo/:tokenAddress', async (req, res) =>
             collection_name,
             description
         );
-
-        console.log(txn);
 
         if (txn) {
             res.json({ simpleTxn: txn });

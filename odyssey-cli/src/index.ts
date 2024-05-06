@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 //const { OdysseyClient } = require('odyssey-sdk');
-//const { OdysseyClient } = require('aptivate-odyssey-sdk');
-const { OdysseyClient } = require('../../odyssey-sdk/dist/odysseyClient');
+const { OdysseyClient } = require('aptivate-odyssey-sdk');
+//const { OdysseyClient } = require('../../odyssey-sdk/dist/odysseyClient');
 
 const inquirer = require('inquirer');
 
@@ -135,7 +135,8 @@ program
         public_sales_mint_fee,
         public_max_mint,
         random_trait,
-        asset_dir
+        asset_dir,
+        network
       );
       
       try {
@@ -201,7 +202,8 @@ program
           description,
           asset_dir,
           keyfilePath,
-          random_trait
+          random_trait,
+          network
         );
           
         console.log('Transaction Hash: ', txnHash);
@@ -216,7 +218,7 @@ program
   });
 
   program
-  .command('update')
+  .command('update-odyssey')
   .description('Update Odyssey based on config.json ')
   .action(async () => {
     try {     
@@ -236,7 +238,7 @@ program
   });
 
 program
-  .command('update-phases-information')
+  .command('update-phases')
   .description('Update phases information')
   .action(async () => {
     try {
@@ -246,10 +248,8 @@ program
         account,
         presale_start_time,
         presale_end_time,
-        presale_mint_fee,
         public_sales_start_time,
         public_sales_end_time,
-        public_sales_mint_fee
       );
       console.log('Transaction Hash: ', txnHash);
     } catch (error: any) {
@@ -258,7 +258,7 @@ program
   });
 
   program
-  .command('update-payment-information')
+  .command('update-payment')
   .description('Update payment information')
   .action(async () => {
     try {
@@ -267,7 +267,8 @@ program
         resource_account, 
         account,
         presale_mint_fee,
-        public_sales_mint_fee
+        public_sales_mint_fee,
+        network
       );
       console.log('Transaction Hash: ', txnHash);
     } catch (error: any) {
@@ -311,20 +312,23 @@ program
       const token_address = token_address_prompt.token_address.trim();
       // Get the validated receiver address
       const token_uri = token_uri_prompt.token_uri.trim();
-      await odysseyClient.updateTokenURI(
+      const txnHash = await odysseyClient.updateTokenURI(
         aptos, 
         resource_account, 
         account, 
         token_address,
         token_uri,  
       );      
+
+      console.log('Transaction Hash: ', txnHash);
+
     } catch (error: any) {
       console.error('Error updating tokem URI:', error.message);
     }
   });
 
 program
-  .command('update-collection-royalties')
+  .command('update-royalties')
   .description('Update collection royalties')
   .action(async () => {
     try {
@@ -375,7 +379,7 @@ program
       const royalty_denominator = royalty_denominator_prompt.royalty_denominator;
       const payee_address = payee_address_prompt.payee_address.trim();
       
-      await odysseyClient.updateCollectionRoyalties(
+      const txnHash = await odysseyClient.updateCollectionRoyalties(
         aptos, 
         resource_account, 
         account, 
@@ -384,6 +388,9 @@ program
         royalty_denominator, 
         payee_address,
       );
+
+      console.log('Transaction Hash: ', txnHash);
+      
     } catch (error: any) {
       console.error('Error updating collection royalties:', error.message);
     }

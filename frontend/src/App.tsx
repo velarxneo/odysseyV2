@@ -4,7 +4,6 @@ import { WalletSelector } from "@aptos-labs/wallet-adapter-ant-design";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import AssetDisplay from './OwnedCollectionAsset'; 
 import OwnedCollectionAsset from './OwnedCollectionAsset';
 import { OdysseyResource } from './interface/OdysseyTypes'; 
 
@@ -119,9 +118,35 @@ function App() {
       const data = await response.json();
       const imageUrl = data.image;
   
+      changeFaviconAndTitle(imageUrl, collectionName);
+  
       setCoverImage(imageUrl);
     } catch (error: any) {
       console.error("Error fetching cover image:", error.message);
+    }
+  };
+
+  // Change Favicon and Title
+  const changeFaviconAndTitle = async (imageUrl: string, newTitle: string) => {
+    try {
+        const dataURL = await getPNGDataURL(imageUrl);
+
+        // Change Favicon
+        const oldFavicon = document.querySelector('link[rel="icon"]');
+        if (oldFavicon) {
+            oldFavicon.setAttribute('href', dataURL);
+        } else {
+            const favicon = document.createElement('link');
+            favicon.rel = 'icon';
+            favicon.href = dataURL;
+            document.head.appendChild(favicon);
+        }
+
+        // Change Title
+        document.title = newTitle;
+
+    } catch (error) {
+        console.error('Error changing favicon and title:', error);
     }
   };
 

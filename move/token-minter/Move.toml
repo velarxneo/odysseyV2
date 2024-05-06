@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-minter = "0x93680d0ecdee118d5eb30b719412b07284b9a52a48c5f1cb9a24972e32cbbb38"
+minter = "0xa8a3cdff3068ee47cb0419cbd93ad1f71bdabb50431fc0f5b971a00c613b13d2"
 migration = "0x111" # Will replace when we have an address responsible for migrations.
 # Mock addresses for testing.
 minter_v2 = "0x999"
