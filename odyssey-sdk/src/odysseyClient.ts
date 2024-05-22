@@ -1,10 +1,11 @@
-import * as fs from 'fs';
+
 import { Account, Aptos, WriteSetChangeWriteResource } from '@aptos-labs/ts-sdk';
-import { uploadNFT } from "./arweaveUploadFiles";
 import { InputTransactionData } from '@aptos-labs/wallet-adapter-react';
-import path from 'path';
-import { createCanvas, loadImage } from 'canvas';
 import { AptosPriceServiceConnection } from "@pythnetwork/pyth-aptos-js";
+import { createCanvas, loadImage } from 'canvas';
+import { uploadNFT } from "./arweaveUploadFiles";
+import * as fs from 'fs';
+import path from 'path';
 
 const moduleAddress = "0xa8a3cdff3068ee47cb0419cbd93ad1f71bdabb50431fc0f5b971a00c613b13d2";
 const moduleAddressName = "0xa8a3cdff3068ee47cb0419cbd93ad1f71bdabb50431fc0f5b971a00c613b13d2::odyssey_v2";
@@ -19,8 +20,10 @@ const PRESALE_MINT_STAGE_CATEGORY = "Presale mint stage";
 const PUBLIC_SALE_MINT_STAGE_CATEGORY = "Public sale mint stage";
 const PRESALE_COIN_PAYMENT_CATEGORY = "Presale mint fee";
 const PUBLIC_SALE_COIN_PAYMENT_CATEGORY = "Public sale mint fee";
-
-const APTOS_OCTA = 100000000;
+const HERMES_ENDPOINT_MAINNET = "https://hermes.pyth.network";
+const APT_USD_PRICE_ID_MAINNET = "0x03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
+const HERMES_ENDPOINT_TESTNET = "https://hermes-beta.pyth.network";
+const APT_USD_PRICE_ID_TESTNET = "0x44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
 
 interface FolderStructure {
   [folderName: string]: {
@@ -71,10 +74,8 @@ export class OdysseyClient {
         console.log("\nrandom trait = true");
         this.createRandomTraitConfigJSONFile(asset_dir);
       }
-      
-      const priceFeedUpdateData  = await getOdysseyPrice(network);
-      
 
+      const priceFeedUpdateData  = await getOdysseyPrice(network);
       const txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -101,13 +102,9 @@ export class OdysseyClient {
       });
 
       console.log("\n=== Creating odyssey ===\n");
-      
       let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       let getResourceAccount : any = await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      
       console.log(`Committed transaction: ${committedTxn.hash}`);
-      
       // Filter the data based on the 'type' property
       const OdysseyAddress = (
         getResourceAccount.changes.find(
@@ -140,14 +137,11 @@ export class OdysseyClient {
     try {
       console.log("\n=== Minting NFT ===\n");
       let tokenURI = "";
-
       const collectionDetails = await aptos.getCollectionData({
         creatorAddress: resource_account,
         collectionName: collection_name,
       });
-      
       const priceFeedUpdateData  = await getOdysseyPrice(network);
-      
       const txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -161,18 +155,12 @@ export class OdysseyClient {
           ],
         },
       });
-     
       let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       let getNFTAddress : any = await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-     
-      //console.log(`Committed transaction: ${committedTxn.hash}`);
-
       // Find the object with "type": "0x4::token::Token" in changes
       let tokenObject = getNFTAddress.changes.find((change: { data: { type: string; }; }) => {
         return change.data && change.data.type === "0x4::token::Token";
       });
-
       // Extract the "addr" field from the token object
       let addr = null;
       if (tokenObject) {
@@ -187,11 +175,11 @@ export class OdysseyClient {
       }
       
       console.log("\n=== Upload assets ===\n");
+
       tokenURI = await uploadNFT(collectionDetails.current_supply + 1, asset_dir, wallet_json_file_path);
       if (tokenURI === undefined) {
         tokenURI = "";
       }
-
       this.updateTokenURI(aptos, resource_account, account, addr, tokenURI);
 
       return committedTxn.hash;
@@ -215,22 +203,20 @@ export class OdysseyClient {
   ): Promise<string> {
     
     try {
-
       if (random_trait){
         await this.generateTokenRandomTraits(aptos, account, resource_account, token_no);
         await this.generateImageJsonFiles(aptos, resource_account, token_no, collection_name, description, asset_dir);
       }
+      
+      let tokenURI = "";
 
       console.log("\n=== Updating NFT metadata and image===\n");
-      let tokenURI = "";
-    
       console.log("\n=== Upload assets ===\n");
+
       tokenURI = await uploadNFT(token_no, asset_dir, wallet_json_file_path);
-      
       if (tokenURI === undefined) {
         tokenURI = "";
       }
-
       this.updateTokenURI(aptos, resource_account, account, token_address, tokenURI);
 
       return tokenURI;
@@ -239,7 +225,6 @@ export class OdysseyClient {
       throw new Error(`Error updating NFT: ${error.message}`);
     }
   }
-
 
   async uploadNFT(
     id: number,
@@ -250,7 +235,9 @@ export class OdysseyClient {
     
     try {
       console.log("\n=== Upload assets ===\n");
+
       let tokenURI = await uploadNFT(id, asset_dir, wallet_json_file_path);
+
       if (tokenURI === undefined) {
         tokenURI = "";
       }
@@ -275,7 +262,6 @@ export class OdysseyClient {
       let tokenURI="";
 
       const priceFeedUpdateData  = await getOdysseyPrice(network);
-            
       const txn: InputTransactionData = {       
         data: {
           function: `${moduleAddressName}::mint_to`,
@@ -288,8 +274,6 @@ export class OdysseyClient {
           ],
         },
       };
-
-      console.log(txn);
   
       return txn;
 
@@ -324,12 +308,9 @@ export class OdysseyClient {
           ],
         },
       });
-    
       let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      
       txHash.push(committedTxn.hash);
-
       txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -342,11 +323,8 @@ export class OdysseyClient {
           ],
         },
       });
-    
       committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-
       txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -359,11 +337,8 @@ export class OdysseyClient {
           ],
         },
       });
-    
       committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-
       txHash.push(committedTxn.hash);
 
       return txHash;
@@ -388,7 +363,6 @@ export class OdysseyClient {
       let txHash: string[] = [];
       let committedTxn;
       const priceFeedUpdateData  = await getOdysseyPrice(network);
-      
       let txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -403,12 +377,9 @@ export class OdysseyClient {
           ],
         },
       });
-    
       committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      
       txHash.push(committedTxn.hash);
-
       txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
@@ -423,11 +394,8 @@ export class OdysseyClient {
           ],
         },
       });
-    
       committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-
       txHash.push(committedTxn.hash);
 
       return txHash;
@@ -445,8 +413,7 @@ export class OdysseyClient {
     collection_name: string, 
     description: string,
     cover: string,
-    collection_size: number,
-    
+    collection_size: number
   ): Promise<string> {
     
     try {
@@ -467,11 +434,9 @@ export class OdysseyClient {
         },
       });
     
-      let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
+      let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      //console.log(`Committed transaction: ${committedTxn.hash}`);
-      
+
       return committedTxn.hash;
 
     } catch (error: any) {
@@ -504,9 +469,7 @@ export class OdysseyClient {
       });
     
       let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      //console.log(`Committed transaction: ${committedTxn.hash}`);
       
       return committedTxn.hash;
 
@@ -544,9 +507,7 @@ export class OdysseyClient {
       });
     
       let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      //console.log(`Committed transaction: ${committedTxn.hash}`);
       
       return committedTxn.hash;
 
@@ -562,8 +523,7 @@ export class OdysseyClient {
     collection_address: string,
     royalty_numerator: string,
     royalty_denominator: string,
-    payee_address: string,
-    
+    payee_address: string
   ): Promise<string> {
     
     try {
@@ -584,9 +544,7 @@ export class OdysseyClient {
       });
     
       let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-      
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      //console.log(`Committed transaction: ${committedTxn.hash}`);
       
       return committedTxn.hash;
 
@@ -603,45 +561,38 @@ export class OdysseyClient {
     
     try {
       console.log("\n=== Pause/Resume odyssey ===\n");
-
-        const txn = await aptos.transaction.build.simple({
-          sender: account.accountAddress,
-          data: {
-            function: `${moduleAddressName}::pause_resume_mint`,
-            functionArguments: [
-              resource_account,
-            ],
-          },
-        });
+      const txn = await aptos.transaction.build.simple({
+        sender: account.accountAddress,
+        data: {
+          function: `${moduleAddressName}::pause_resume_mint`,
+          functionArguments: [
+            resource_account,
+          ],
+        },
+      });
       
-        let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-        
-        await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-        console.log(`Committed transaction: ${committedTxn.hash}`);
-            
-         
+      let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
+      await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
+      console.log(`Committed transaction: ${committedTxn.hash}`);
+
     } catch (error: any) {
       throw new Error(`Error pause/resume odyssey: ${error.message}`);
     }
   }
 
   async getOdyssey(aptos: Aptos, resource: string): Promise<string> {
-    
     const odysseyResource = await aptos.getAccountResource({
         accountAddress:resource,
         resourceType:`${moduleAddressName}::OdysseyMintData`}
     );
-
     return odysseyResource;
   }
 
   async getStage(aptos: Aptos, resource: string): Promise<string> {
-    
     const odysseyResource = await aptos.getAccountResource({
         accountAddress:resource,
         resourceType:`${moduleAddress}::mint_stage::MintStageData`}
     );
-
     return odysseyResource;
   }
 
@@ -659,8 +610,7 @@ export class OdysseyClient {
       },
     });
 
-    if(balance[0])
-    {
+    if(balance[0]){
       return parseInt(balance[0].toString());  
     }
     else{
@@ -682,15 +632,13 @@ export class OdysseyClient {
       },
     });
 
-    if(balance[0])
-    {
+    if(balance[0]){
       return parseInt(balance[0].toString());  
     }
     else{
       return 0;
     }
   }
-
 
   async updateWhitelistAddresses(aptos: Aptos, account: Account, resource_account: string, whitelist_dir_file: string){
     try {
@@ -720,20 +668,16 @@ export class OdysseyClient {
       });
 
       console.log("\n=== Updating allowlist ===\n");
-
       let committedTxn = await aptos.signAndSubmitTransaction({ signer: account, transaction: txn });
-  
       await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      
       console.log(`Committed transaction: ${committedTxn.hash}`);
-      
+
     } catch (error) {
       console.error('Error updating allowlist:', error);
       return null;
     }
   }
   
-
   // 1. Call move contract by looping json file and populate onchain trait config:
   //  - This method only needs to be called one time upon json file creation           
       
@@ -1132,17 +1076,17 @@ async function getOdysseyPrice(network: string) {
 
   if (network == "mainnet")
   {
-    HERMES_ENDPOINT = "https://hermes.pyth.network";
+    HERMES_ENDPOINT = HERMES_ENDPOINT_MAINNET;
 
     // Price id : this is not an aptos account but instead an opaque identifier for each price https://pyth.network/developers/price-feed-ids/#pyth-cross-chain-testnet
-    APT_USD_PRICE_ID = "0x03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
+    APT_USD_PRICE_ID = APT_USD_PRICE_ID_MAINNET;
   }
   else
   {
-    HERMES_ENDPOINT = "https://hermes-beta.pyth.network";
+    HERMES_ENDPOINT = HERMES_ENDPOINT_TESTNET;
 
     // Price id : this is not an aptos account but instead an opaque identifier for each price https://pyth.network/developers/price-feed-ids/#pyth-cross-chain-testnet
-    APT_USD_PRICE_ID = "0x44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
+    APT_USD_PRICE_ID = APT_USD_PRICE_ID_TESTNET;
   }
 
   // Connection

@@ -1,25 +1,19 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-//const { OdysseyClient } = require('odyssey-sdk');
-const { OdysseyClient } = require('aptivate-odyssey-sdk');
-//const { OdysseyClient } = require('../../odyssey-sdk/dist/odysseyClient');
-
-const inquirer = require('inquirer');
-
 import fs from 'fs';
 import path from 'path';
 import { Ed25519PrivateKey, Account, Aptos, AptosConfig, Network} from "@aptos-labs/ts-sdk";
+const { OdysseyClient } = require('aptivate-odyssey-sdk');
+const inquirer = require('inquirer');
 const program = new Command();
 
 program.version('2.0.0');
 
 // Initialize an empty config object
 let config: any = {};
-
 // Read the config.json file if it exists
 const currentFolder = process.cwd();
 const configPath = path.resolve(currentFolder, 'config.json');
-
 interface Config {
   private_key: string;
   network: string;
@@ -58,6 +52,7 @@ try {
 } catch (error: any) {
   console.error('Error reading config file:', error.message);
 }
+
 const odysseyClient = new OdysseyClient();
 
 // Initialize Odyssey to be created in APTOS
@@ -74,14 +69,16 @@ program
     }
   });
 
-
 let { resource_account, private_key, network, odyssey_name, collection, random_trait, storage } = config;
+
 if (collection === undefined){
   collection = "";
 }
+
 if (storage === undefined){
   storage = "";
 }
+
 let { 
   collection_name, 
   description,
@@ -102,14 +99,14 @@ let {
   
 let { 
   arweave
-  } = storage;
+ } = storage;
 
 if (arweave === undefined){
   arweave = "";
 }
 const keyfilePath = arweave.keyfilePath;
 const aptos = getNetwork(network !== undefined ? network : "testnet");
-const account = getAccount(private_key !== undefined ? private_key : "0x9404dc6c1fde873997377d5290131cf566eb62e771287181f662cba4e841d8ea");
+const account = getAccount(private_key !== undefined ? private_key : "0x000");
 
 // Command to create a odyssey
 program
@@ -217,7 +214,7 @@ program
     }
   });
 
-  program
+program
   .command('update-odyssey')
   .description('Update Odyssey based on config.json ')
   .action(async () => {
@@ -257,7 +254,7 @@ program
     }
   });
 
-  program
+program
   .command('update-payment')
   .description('Update payment information')
   .action(async () => {
@@ -282,8 +279,7 @@ program
   .description('Update token URI')
   .action(async () => {
     try {
-      const token_address_prompt = await inquirer.prompt([
-        {
+      const token_address_prompt = await inquirer.prompt([{
           type: 'string',
           name: 'token_address',
           message: 'Enter the token address:',
@@ -295,8 +291,7 @@ program
           },
         },
       ]);
-      const token_uri_prompt = await inquirer.prompt([
-        {
+      const token_uri_prompt = await inquirer.prompt([{
           type: 'string',
           name: 'token_uri',
           message: 'Enter the token URI:',
@@ -407,7 +402,7 @@ program
     }
   });
 
-  program
+program
   .command('upload-token-metadata-image')
   .description('Upload and update NFT metadata and image')
   .action(async () => {
