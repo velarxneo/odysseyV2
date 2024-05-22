@@ -1,19 +1,25 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
-import fs from 'fs';
-import path from 'path';
-import { Ed25519PrivateKey, Account, Aptos, AptosConfig, Network} from "@aptos-labs/ts-sdk";
-const { OdysseyClient } = require('aptivate-odyssey-sdk');
-const inquirer = require('inquirer');
+import { Command } from "commander";
+import fs from "fs";
+import path from "path";
+import {
+  Ed25519PrivateKey,
+  Account,
+  Aptos,
+  AptosConfig,
+  Network,
+} from "@aptos-labs/ts-sdk";
+const { OdysseyClient } = require("aptivate-odyssey-sdk");
+const inquirer = require("inquirer");
 const program = new Command();
 
-program.version('2.0.0');
+program.version("2.0.0");
 
 // Initialize an empty config object
 let config: any = {};
 // Read the config.json file if it exists
 const currentFolder = process.cwd();
-const configPath = path.resolve(currentFolder, 'config.json');
+const configPath = path.resolve(currentFolder, "config.json");
 interface Config {
   private_key: string;
   network: string;
@@ -46,41 +52,49 @@ interface Config {
 
 try {
   if (fs.existsSync(configPath)) {
-    const configData = fs.readFileSync(configPath, 'utf-8');
+    const configData = fs.readFileSync(configPath, "utf-8");
     config = JSON.parse(configData);
   }
 } catch (error: any) {
-  console.error('Error reading config file:', error.message);
+  console.error("Error reading config file:", error.message);
 }
 
 const odysseyClient = new OdysseyClient();
 
 // Initialize Odyssey to be created in APTOS
 program
-  .command('init')
-  .description('Initialize Odyssey to be created in APTOS.')
+  .command("init")
+  .description("Initialize Odyssey to be created in APTOS.")
   .action(async () => {
     try {
       const config = await promptConfig();
       writeConfigToFile(config);
-      console.log('Config file created successfully: config.json');
+      console.log("Config file created successfully: config.json");
     } catch (error: any) {
-      console.error('Error initializing Odyssey:', error.message);
+      console.error("Error initializing Odyssey:", error.message);
     }
   });
 
-let { resource_account, private_key, network, odyssey_name, collection, random_trait, storage } = config;
+let {
+  resource_account,
+  private_key,
+  network,
+  odyssey_name,
+  collection,
+  random_trait,
+  storage,
+} = config;
 
-if (collection === undefined){
+if (collection === undefined) {
   collection = "";
 }
 
-if (storage === undefined){
+if (storage === undefined) {
   storage = "";
 }
 
-let { 
-  collection_name, 
+let {
+  collection_name,
   description,
   cover,
   collection_size,
@@ -94,14 +108,12 @@ let {
   public_sales_mint_fee,
   public_max_mint,
   whitelist_dir_file,
-  asset_dir
-  } = collection;
-  
-let { 
-  arweave
- } = storage;
+  asset_dir,
+} = collection;
 
-if (arweave === undefined){
+let { arweave } = storage;
+
+if (arweave === undefined) {
   arweave = "";
 }
 const keyfilePath = arweave.keyfilePath;
@@ -110,15 +122,15 @@ const account = getAccount(private_key !== undefined ? private_key : "0x000");
 
 // Command to create a odyssey
 program
-  .command('create')
-  .description('Create a new Odyssey on APTOS')
+  .command("create")
+  .description("Create a new Odyssey on APTOS")
   .action(async () => {
     try {
       const resource_account = await odysseyClient.createOdyssey(
         aptos,
         account,
         odyssey_name,
-        collection_name, 
+        collection_name,
         description,
         cover,
         collection_size,
@@ -135,10 +147,10 @@ program
         asset_dir,
         network
       );
-      
+
       try {
         // Check if resource_account already exists
-        if (config.hasOwnProperty('resource_account')) {
+        if (config.hasOwnProperty("resource_account")) {
           // Update the existing resource_account
           config.resource_account = resource_account;
         } else {
@@ -148,19 +160,19 @@ program
         }
         // Write the updated config back to config.json
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-        console.log('Config updated successfully.');
-        console.log('Return with resource: ', resource_account);
+        console.log("Config updated successfully.");
+        console.log("Return with resource: ", resource_account);
       } catch (error: any) {
-        console.error('Error updating config:', error.message);
+        console.error("Error updating config:", error.message);
       }
     } catch (error: any) {
-      console.error('Error creating odyssey:', error.message);
+      console.error("Error creating odyssey:", error.message);
     }
   });
 
 program
-  .command('mint-to')
-  .description('Minting NFT to <address>')
+  .command("mint-to")
+  .description("Minting NFT to <address>")
   .action(async () => {
     try {
       // Retrieve details of the NFT collection from the blockchain
@@ -174,9 +186,9 @@ program
         // Prompt user for the receiver address
         const to_address_prompt = await inquirer.prompt([
           {
-            type: 'string',
-            name: 'to_address',
-            message: 'Enter the receiver address:',
+            type: "string",
+            name: "to_address",
+            message: "Enter the receiver address:",
             validate: (value: string) => {
               if (!value.trim()) {
                 return 'Please enter a valid address".';
@@ -202,87 +214,87 @@ program
           random_trait,
           network
         );
-          
-        console.log('Transaction Hash: ', txnHash);
+
+        console.log("Transaction Hash: ", txnHash);
       } else {
         // Throw an error if the collection is fully minted
-        console.error('Error minting NFT: Fully minted');
+        console.error("Error minting NFT: Fully minted");
       }
     } catch (error: any) {
       // Catch any errors that occur during the minting process
-      console.error('Error minting NFT: ', error.message);
+      console.error("Error minting NFT: ", error.message);
     }
   });
 
 program
-  .command('update-odyssey')
-  .description('Update Odyssey based on config.json ')
+  .command("update-odyssey")
+  .description("Update Odyssey based on config.json ")
   .action(async () => {
-    try {     
+    try {
       await odysseyClient.updateOdyssey(
-        aptos, 
-        resource_account, 
-        account, 
+        aptos,
+        resource_account,
+        account,
         odyssey_name,
-        collection_name, 
+        collection_name,
         description,
         cover,
-        collection_size,
+        collection_size
       );
     } catch (error: any) {
-      console.error('Error updating whitelist:', error.message);
+      console.error("Error updating whitelist:", error.message);
     }
   });
 
 program
-  .command('update-phases')
-  .description('Update phases information')
+  .command("update-phases")
+  .description("Update phases information")
   .action(async () => {
     try {
       const txnHash = await odysseyClient.updatePhasesInformation(
-        aptos, 
-        resource_account, 
+        aptos,
+        resource_account,
         account,
         presale_start_time,
         presale_end_time,
         public_sales_start_time,
-        public_sales_end_time,
+        public_sales_end_time
       );
-      console.log('Transaction Hash: ', txnHash);
+      console.log("Transaction Hash: ", txnHash);
     } catch (error: any) {
-      console.error('Error updating phases information: ', error.message);
+      console.error("Error updating phases information: ", error.message);
     }
   });
 
 program
-  .command('update-payment')
-  .description('Update payment information')
+  .command("update-payment")
+  .description("Update payment information")
   .action(async () => {
     try {
       const txnHash = await odysseyClient.updatePaymentInformation(
-        aptos, 
-        resource_account, 
+        aptos,
+        resource_account,
         account,
         presale_mint_fee,
         public_sales_mint_fee,
         network
       );
-      console.log('Transaction Hash: ', txnHash);
+      console.log("Transaction Hash: ", txnHash);
     } catch (error: any) {
-      console.error('Error updating payment information: ', error.message);
+      console.error("Error updating payment information: ", error.message);
     }
   });
 
-
 program
-  .command('update-token-uri')
-  .description('Update token URI')
+  .command("update-token-uri")
+  .description("Update token URI")
   .action(async () => {
     try {
-      const token_address_prompt = await inquirer.prompt([{
-          type: 'string',
-          name: 'token_address',
-          message: 'Enter the token address:',
+      const token_address_prompt = await inquirer.prompt([
+        {
+          type: "string",
+          name: "token_address",
+          message: "Enter the token address:",
           validate: (value: string) => {
             if (!value.trim()) {
               return 'Please enter a valid address".';
@@ -291,10 +303,11 @@ program
           },
         },
       ]);
-      const token_uri_prompt = await inquirer.prompt([{
-          type: 'string',
-          name: 'token_uri',
-          message: 'Enter the token URI:',
+      const token_uri_prompt = await inquirer.prompt([
+        {
+          type: "string",
+          name: "token_uri",
+          message: "Enter the token URI:",
           validate: (value: string) => {
             if (!value.trim()) {
               return 'Please enter a valid token URI".';
@@ -308,23 +321,22 @@ program
       // Get the validated receiver address
       const token_uri = token_uri_prompt.token_uri.trim();
       const txnHash = await odysseyClient.updateTokenURI(
-        aptos, 
-        resource_account, 
-        account, 
+        aptos,
+        resource_account,
+        account,
         token_address,
-        token_uri,  
-      );      
+        token_uri
+      );
 
-      console.log('Transaction Hash: ', txnHash);
-
+      console.log("Transaction Hash: ", txnHash);
     } catch (error: any) {
-      console.error('Error updating tokem URI:', error.message);
+      console.error("Error updating tokem URI:", error.message);
     }
   });
 
 program
-  .command('update-royalties')
-  .description('Update collection royalties')
+  .command("update-royalties")
+  .description("Update collection royalties")
   .action(async () => {
     try {
       const collectionDetails = await aptos.getCollectionData({
@@ -333,9 +345,9 @@ program
       });
       const royalty_numerator_prompt = await inquirer.prompt([
         {
-          type: 'number',
-          name: 'royalty_numerator',
-          message: 'Enter royalty numerator:',
+          type: "number",
+          name: "royalty_numerator",
+          message: "Enter royalty numerator:",
           validate: (value: number) => {
             if (value < 0) {
               return 'Please enter a valid numerator".';
@@ -346,9 +358,9 @@ program
       ]);
       const royalty_denominator_prompt = await inquirer.prompt([
         {
-          type: 'number',
-          name: 'royalty_denominator',
-          message: 'Enter royalty denominator:',
+          type: "number",
+          name: "royalty_denominator",
+          message: "Enter royalty denominator:",
           validate: (value: number) => {
             if (value < 0) {
               return 'Please enter a valid denominator".';
@@ -359,9 +371,9 @@ program
       ]);
       const payee_address_prompt = await inquirer.prompt([
         {
-          type: 'string',
-          name: 'payee_address',
-          message: 'Enter the payee address:',
+          type: "string",
+          name: "payee_address",
+          message: "Enter the payee address:",
           validate: (value: string) => {
             if (!value.trim()) {
               return 'Please enter a valid address".';
@@ -371,47 +383,52 @@ program
         },
       ]);
       const royalty_numerator = royalty_numerator_prompt.royalty_numerator;
-      const royalty_denominator = royalty_denominator_prompt.royalty_denominator;
+      const royalty_denominator =
+        royalty_denominator_prompt.royalty_denominator;
       const payee_address = payee_address_prompt.payee_address.trim();
-      
+
       const txnHash = await odysseyClient.updateCollectionRoyalties(
-        aptos, 
-        resource_account, 
-        account, 
+        aptos,
+        resource_account,
+        account,
         collectionDetails.collection_id,
-        royalty_numerator,  
-        royalty_denominator, 
-        payee_address,
+        royalty_numerator,
+        royalty_denominator,
+        payee_address
       );
 
-      console.log('Transaction Hash: ', txnHash);
-      
+      console.log("Transaction Hash: ", txnHash);
     } catch (error: any) {
-      console.error('Error updating collection royalties:', error.message);
+      console.error("Error updating collection royalties:", error.message);
     }
   });
 
 program
-  .command('update-whitelist')
-  .description('Update whitelist')
+  .command("update-whitelist")
+  .description("Update whitelist")
   .action(async () => {
     try {
-      await odysseyClient.updateWhitelistAddresses(aptos, account, resource_account, whitelist_dir_file);
+      await odysseyClient.updateWhitelistAddresses(
+        aptos,
+        account,
+        resource_account,
+        whitelist_dir_file
+      );
     } catch (error: any) {
-      console.error('Error updating whitelist:', error.message);
+      console.error("Error updating whitelist:", error.message);
     }
   });
 
 program
-  .command('upload-token-metadata-image')
-  .description('Upload and update NFT metadata and image')
+  .command("upload-token-metadata-image")
+  .description("Upload and update NFT metadata and image")
   .action(async () => {
     try {
       const token_address_prompt = await inquirer.prompt([
         {
-          type: 'string',
-          name: 'token_address',
-          message: 'Enter the token address:',
+          type: "string",
+          name: "token_address",
+          message: "Enter the token address:",
           validate: (value: string) => {
             if (!value.trim()) {
               return 'Please enter a valid address".';
@@ -422,12 +439,12 @@ program
       ]);
       const token_no_prompt = await inquirer.prompt([
         {
-          type: 'number',
-          name: 'token_no',
-          message: 'Enter the token no.:',
+          type: "number",
+          name: "token_no",
+          message: "Enter the token no.:",
           validate: (value: number) => {
             if (value <= 0) {
-              return 'Please enter a valid number.';
+              return "Please enter a valid number.";
             }
             return true;
           },
@@ -445,159 +462,186 @@ program
         random_trait,
         collection_name,
         description
-      );      
+      );
     } catch (error: any) {
-      console.error('Error updating NFT:', error.message);
+      console.error("Error updating NFT:", error.message);
     }
   });
 
 program
-  .command('get-odyssey')
-  .description('Retrieve Odyssey information')
+  .command("get-odyssey")
+  .description("Retrieve Odyssey information")
   .action(async () => {
     try {
       const odyssey = await odysseyClient.getOdyssey(aptos, resource_account);
-      console.log('odyssey: ', odyssey);
+      console.log("odyssey: ", odyssey);
     } catch (error: any) {
-      console.error('Error retrieveing odyssey:', error.message);
+      console.error("Error retrieveing odyssey:", error.message);
     }
   });
 
 program
-  .command('get-collection-details')
-  .description('Retrieve collection details')
+  .command("get-collection-details")
+  .description("Retrieve collection details")
   .action(async () => {
     try {
       const collectionDetails = await aptos.getCollectionData({
         creatorAddress: resource_account,
         collectionName: collection_name,
       });
-      console.log(`Collection details: ${JSON.stringify(collectionDetails, null, 4)}`);
+      console.log(
+        `Collection details: ${JSON.stringify(collectionDetails, null, 4)}`
+      );
     } catch (error: any) {
-      console.error('Error retriving collection details:', error.message);
+      console.error("Error retriving collection details:", error.message);
     }
   });
 
 // command to retrieve the trait config list onchain
 program
-  .command('get-trait-config-list')
-  .description('Retrieve trait config list')
+  .command("get-trait-config-list")
+  .description("Retrieve trait config list")
   .action(async () => {
     try {
-      const traitConfigList = await odysseyClient.getTraitConfigList(aptos, resource_account);
-      console.log('Trait Config List:', traitConfigList);
+      const traitConfigList = await odysseyClient.getTraitConfigList(
+        aptos,
+        resource_account
+      );
+      console.log("Trait Config List:", traitConfigList);
     } catch (error: any) {
-      console.error('Error retrieving Trait Config List:', error.message);
+      console.error("Error retrieving Trait Config List:", error.message);
     }
   });
 
 // command to retrieve all tokenID's traits and respective trait values
 program
-  .command('get-token-trait-values')
-  .description('Retrieve token trait values')
+  .command("get-token-trait-values")
+  .description("Retrieve token trait values")
   .action(async () => {
     try {
-      const tokenTraitValues = await odysseyClient.getTokenTraitValues(aptos, resource_account);
-      console.log('Token Trait Values:', tokenTraitValues);
+      const tokenTraitValues = await odysseyClient.getTokenTraitValues(
+        aptos,
+        resource_account
+      );
+      console.log("Token Trait Values:", tokenTraitValues);
     } catch (error: any) {
-      console.error('Error retrieving Token Trait Values:', error.message);
+      console.error("Error retrieving Token Trait Values:", error.message);
     }
   });
 
 program
-  .command('pause-resume-odyssey')
-  .description('Pause/resume Odyssey minting')
+  .command("pause-resume-odyssey")
+  .description("Pause/resume Odyssey minting")
   .action(async () => {
     try {
       await odysseyClient.pauseResumeOdyssey(aptos, resource_account, account);
       const odyssey = await odysseyClient.getOdyssey(aptos, resource_account);
-      console.log("Odyssey paused status: " + odyssey.paused)
+      console.log("Odyssey paused status: " + odyssey.paused);
     } catch (error: any) {
-      console.error('Error pausing/resuming odyssey:', error.message);
+      console.error("Error pausing/resuming odyssey:", error.message);
     }
   });
 
 // command to generate a tokenID's trait values randomly based on config list
 // need to set tokenID and send to move contract as parameter
 program
-  .command('generate-token-random-traits')
-  .description('Generate token random traits')
+  .command("generate-token-random-traits")
+  .description("Generate token random traits")
   .action(async () => {
     try {
       const token_no_prompt = await inquirer.prompt([
         {
-          type: 'number',
-          name: 'token_no',
-          message: 'Enter the token no.:',
+          type: "number",
+          name: "token_no",
+          message: "Enter the token no.:",
           validate: (value: number) => {
             if (value <= 0) {
-              return 'Please enter a valid number.';
+              return "Please enter a valid number.";
             }
             return true;
           },
         },
       ]);
-      const txnHash = await odysseyClient.generateTokenRandomTraits(aptos, account, resource_account, token_no_prompt.token_no);
-      console.log('Transaction Hash: ', txnHash);
+      const txnHash = await odysseyClient.generateTokenRandomTraits(
+        aptos,
+        account,
+        resource_account,
+        token_no_prompt.token_no
+      );
+      console.log("Transaction Hash: ", txnHash);
     } catch (error: any) {
-      console.error('Error Generating Token Random Traits:', error.message);
+      console.error("Error Generating Token Random Traits:", error.message);
     }
   });
 
 // command to generate all image files and metadata json files
 program
-  .command('generate-all-img-json-files')
-  .description('Generate all image and metadata json files')
+  .command("generate-all-img-json-files")
+  .description("Generate all image and metadata json files")
   .action(async () => {
     try {
       const token_no_prompt = await inquirer.prompt([
         {
-          type: 'number',
-          name: 'token_no',
-          message: 'Enter the token no.:',
+          type: "number",
+          name: "token_no",
+          message: "Enter the token no.:",
           validate: (value: number) => {
             if (value <= 0) {
-              return 'Please enter a valid number.';
+              return "Please enter a valid number.";
             }
             return true;
           },
         },
       ]);
-      const tokenTraitValues = await odysseyClient.generateImageJsonFiles(aptos, resource_account, token_no_prompt.token_no);
-      console.log('Token Trait Values:', tokenTraitValues);
+      const tokenTraitValues = await odysseyClient.generateImageJsonFiles(
+        aptos,
+        resource_account,
+        token_no_prompt.token_no
+      );
+      console.log("Token Trait Values:", tokenTraitValues);
     } catch (error: any) {
-      console.error('Error generating Image and Metadata Json Files:', error.message);
+      console.error(
+        "Error generating Image and Metadata Json Files:",
+        error.message
+      );
     }
   });
 
 // command to populate the trait config list onchain
 program
-  .command('populate-trait-config-list')
-  .description('Populate trait config list')
+  .command("populate-trait-config-list")
+  .description("Populate trait config list")
   .action(async () => {
     try {
-      const txnHash = await odysseyClient.populateTraitConfigList(aptos, account, resource_account, asset_dir);
-      //console.log('Transaction Hash: ', txnHash); 
+      const txnHash = await odysseyClient.populateTraitConfigList(
+        aptos,
+        account,
+        resource_account,
+        asset_dir
+      );
+      //console.log('Transaction Hash: ', txnHash);
     } catch (error: any) {
-      console.error('Error populating trait configs:', error.message);
+      console.error("Error populating trait configs:", error.message);
     }
   });
 
 // Command to create trait_config.json file based on folder structure
 program
-  .command('create-random-trait-config-json')
-  .description('Create random trait config json')
+  .command("create-random-trait-config-json")
+  .description("Create random trait config json")
   .action(async () => {
-    try {  
-      let txnHash = await odysseyClient.createRandomTraitConfigJSONFile(asset_dir);
-      console.log('Transaction Hash: ', txnHash); 
-      console.log('Successful creation of randomized trait config json file.');      
+    try {
+      let txnHash = await odysseyClient.createRandomTraitConfigJSONFile(
+        asset_dir
+      );
+      console.log("Transaction Hash: ", txnHash);
+      console.log("Successful creation of randomized trait config json file.");
     } catch (error: any) {
-      console.error('Error creating Random Trait Config JSON File:', error);
+      console.error("Error creating Random Trait Config JSON File:", error);
     }
   });
 
-function getNetwork(network: string): Aptos{
+function getNetwork(network: string): Aptos {
   let selectedNetwork = Network.DEVNET;
   const lowercaseNetwork = network.toLowerCase();
   switch (lowercaseNetwork) {
@@ -623,95 +667,101 @@ function getAccount(privateKey: string): Account {
     legacy: true, // or false, depending on your needs
   });
   return account;
-} 
+}
 
 async function promptConfig(): Promise<Config> {
   const answers = await inquirer.prompt([
     {
-      type: 'input',
-      name: 'private_key',
-      message: 'Enter private key:',
+      type: "input",
+      name: "private_key",
+      message: "Enter private key:",
     },
     {
-      type: 'input',
-      name: 'network',
-      message: 'Enter network (mainnet/testnet/random):',
+      type: "input",
+      name: "network",
+      message: "Enter network (mainnet/testnet/random):",
     },
-    
+
     {
-      type: 'confirm',
-      name: 'random_trait',
-      message: 'Do you need to randomize traits:',
-    },
-    {
-      type: 'input',
-      name: 'keyfilePath',
-      message: 'Enter Arweave keyfile (e.g tHW3GofkxahZd2eDXBIo_oDIchmPmqWB7yWI3xsRfd0.json):',
+      type: "confirm",
+      name: "random_trait",
+      message: "Do you need to randomize traits:",
     },
     {
-      type: 'input',
-      name: 'collection_name',
-      message: 'Enter collection name:',
+      type: "input",
+      name: "keyfilePath",
+      message:
+        "Enter Arweave keyfile (e.g tHW3GofkxahZd2eDXBIo_oDIchmPmqWB7yWI3xsRfd0.json):",
     },
     {
-      type: 'input',
-      name: 'description',
-      message: 'Enter collection description:',
+      type: "input",
+      name: "collection_name",
+      message: "Enter collection name:",
     },
     {
-      type: 'input',
-      name: 'cover',
-      message: 'Enter collection cover image URI:',
+      type: "input",
+      name: "description",
+      message: "Enter collection description:",
     },
     {
-      type: 'number',
-      name: 'collection_size',
-      message: 'Enter collection size:',
+      type: "input",
+      name: "cover",
+      message: "Enter collection cover image URI:",
     },
     {
-      type: 'number',
-      name: 'royalty_numerator',
-      message: 'Enter royalty numerator (if royalty is 5%, key 5 as numerator):',
+      type: "number",
+      name: "collection_size",
+      message: "Enter collection size:",
     },
     {
-      type: 'number',
-      name: 'royalty_denominator',
-      message: 'Enter royalty denominator (if royalty is 5%, key 100 as denominator):',
+      type: "number",
+      name: "royalty_numerator",
+      message:
+        "Enter royalty numerator (if royalty is 5%, key 5 as numerator):",
     },
     {
-      type: 'input',
-      name: 'presale_start_time',
-      message: 'Enter presale start time (e.g 2024-03-21T04:00:00Z):',
+      type: "number",
+      name: "royalty_denominator",
+      message:
+        "Enter royalty denominator (if royalty is 5%, key 100 as denominator):",
     },
     {
-      type: 'input',
-      name: 'presale_end_time',
-      message: 'Enter presale end time (e.g 2024-03-21T04:00:00Z):',
+      type: "input",
+      name: "presale_start_time",
+      message: "Enter presale start time (e.g 2024-03-21T04:00:00Z):",
     },
     {
-      type: 'number',
-      name: 'presale_mint_fee',
-      message: 'Enter presale mint fee in APT (enter 0.1 if mint fee is 0.1 APT)',
+      type: "input",
+      name: "presale_end_time",
+      message: "Enter presale end time (e.g 2024-03-21T04:00:00Z):",
     },
     {
-      type: 'input',
-      name: 'public_sales_start_time',
-      message: 'Enter public sales start time (e.g 2024-03-21T04:00:00Z):',
+      type: "number",
+      name: "presale_mint_fee",
+      message:
+        "Enter presale mint fee in APT (enter 0.1 if mint fee is 0.1 APT)",
     },
     {
-      type: 'input',
-      name: 'public_sales_end_time',
-      message: 'Enter public sales end time (e.g 2024-03-21T04:00:00Z):',
+      type: "input",
+      name: "public_sales_start_time",
+      message: "Enter public sales start time (e.g 2024-03-21T04:00:00Z):",
     },
     {
-      type: 'number',
-      name: 'public_sales_mint_fee',
-      message: 'Enter public sales mint fee in APT (enter 0.1 if mint fee is 0.1 APT):',
+      type: "input",
+      name: "public_sales_end_time",
+      message: "Enter public sales end time (e.g 2024-03-21T04:00:00Z):",
     },
     {
-      type: 'number',
-      name: 'public_max_mint',
-      message: 'Enter max mint 1 wallet can mint in public phase (enter 0 for no limit):',
+      type: "number",
+      name: "public_sales_mint_fee",
+      message:
+        "Enter public sales mint fee in APT (enter 0.1 if mint fee is 0.1 APT):",
+    },
+    {
+      type: "number",
+      name: "public_max_mint",
+      message:
+        "Enter max mint 1 wallet can mint in public phase (enter 0 for no limit):",
     },
   ]);
 
@@ -748,7 +798,7 @@ async function promptConfig(): Promise<Config> {
 
 function writeConfigToFile(config: Config): void {
   const data = JSON.stringify(config, null, 2);
-  fs.writeFileSync('config.json', data);
+  fs.writeFileSync("config.json", data);
 }
 
 program.parse(process.argv);
