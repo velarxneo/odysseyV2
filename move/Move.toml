@@ -40,6 +40,6 @@ local = "token-minter"
 [dependencies.Pyth]
 git = "https://github.com/pyth-network/pyth-crosschain.git"
 subdir = "target_chains/aptos/contracts"
-rev = "main"
+rev = "49fbd2f1213368cc8d92579fe047934b4fafd21e"
 
 [dev-dependencies]

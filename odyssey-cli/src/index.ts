@@ -10,10 +10,11 @@ import {
   Network,
 } from "@aptos-labs/ts-sdk";
 const { OdysseyClient } = require("aptivate-odyssey-sdk");
+//const { OdysseyClient } = require('../../odyssey-sdk/dist/odysseyClient');
 const inquirer = require("inquirer");
 const program = new Command();
 
-program.version("2.0.7");
+program.version("2.0.8");
 
 // Initialize an empty config object
 let config: any = {};

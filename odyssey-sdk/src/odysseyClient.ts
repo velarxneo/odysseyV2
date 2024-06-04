@@ -1,6 +1,8 @@
 import {
   Account,
   Aptos,
+  InputGenerateTransactionPayloadData,
+  TransactionWorkerEventsEnum,
   WriteSetChangeWriteResource,
 } from "@aptos-labs/ts-sdk";
 import { InputTransactionData } from "@aptos-labs/wallet-adapter-react";
@@ -712,41 +714,54 @@ export class OdysseyClient {
     whitelist_dir_file: string
   ) {
     try {
-      let whitelistAddresses = [];
-      let whitelistAmount = [];
+
       const rawData = fs.readFileSync(
         currentFolder + whitelist_dir_file,
         "utf-8"
       );
       const addressData: AddressData[] = JSON.parse(rawData);
 
+      const payloads: InputGenerateTransactionPayloadData[] = [];
+
+      const payload: InputGenerateTransactionPayloadData = {
+        function: `${moduleAddressName}::remove_everyone_from_allowlist`,
+        functionArguments: [
+          resource_account,
+          PRESALE_MINT_STAGE_CATEGORY
+        ],
+      };
+      payloads.push(payload);
+
+
       for (let i = 0; i < addressData.length; i++) {
         let address = addressData[i].address;
         let qty: number = addressData[i].qty;
-        whitelistAddresses.push(address);
-        whitelistAmount.push(qty);
-      }
 
-      const txn = await aptos.transaction.build.simple({
-        sender: account.accountAddress,
-        data: {
-          function: `${moduleAddressName}::repopulate_allowlist`,
+        const payload: InputGenerateTransactionPayloadData = {
+          function: `${moduleAddressName}::add_to_allowlist`,
           functionArguments: [
             resource_account,
             PRESALE_MINT_STAGE_CATEGORY,
-            whitelistAddresses,
-            whitelistAmount,
+            [address],
+            [qty],
           ],
-        },
-      });
+        };
+        payloads.push(payload);
+
+      }
 
       console.log("\n=== Updating allowlist ===\n");
-      let committedTxn = await aptos.signAndSubmitTransaction({
-        signer: account,
-        transaction: txn,
+      aptos.transaction.batch.forSingleAccount({ sender: account, data: payloads });
+
+      aptos.transaction.batch.on(TransactionWorkerEventsEnum.TransactionExecuted, async (data) => {
+        // log event output
+        console.log(`${data.message}`);
+
+        // worker finished execution, we can now unsubscribe from event listeners
+        aptos.transaction.batch.removeAllListeners();
+        process.exit(0);
       });
-      await aptos.waitForTransaction({ transactionHash: committedTxn.hash });
-      console.log(`Committed transaction: ${committedTxn.hash}`);
+
     } catch (error) {
       console.error("Error updating allowlist:", error);
       return null;

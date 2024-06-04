@@ -61,10 +61,10 @@ module minter::odyssey_v2 {
 
     // For the entire list of price_ids head to https://pyth.network/developers/price-feed-ids/#pyth-cross-chain-testnet
     // APTOS_USD Testnet address 
-    //const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
+    const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"44a93dddd8effa54ea51076c4e851b6cbbfd938e82eb90197de38fe8876bb66e";
 
     // APTOS_USD Mainnet address 
-    const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
+    //const APTOS_USD_PRICE_FEED_IDENTIFIER : vector<u8> = x"03ae4db29ed4ae33d323568895aa00337e658e348b37509f5372ae51f0af00d5";
 
     const OdysseyAddress: address = @0x359c05f421b5594350e0040b2ee79a9532d33d207e79bdee6652bcc093b6afd4;
     const Odyssey_fee: u64 = 20000000;
@@ -616,6 +616,14 @@ module minter::odyssey_v2 {
         });
     }
 
+    public entry fun remove_everyone_from_allowlist(
+        owner: &signer,
+        odyssey: Object<OdysseyMintData>,
+        stage: String
+    ) {
+        mint_stage::remove_everyone_from_allowlist(owner, odyssey, stage);
+    }
+
      public entry fun repopulate_allowlist(
         owner: &signer,
         odyssey: Object<OdysseyMintData>,
@@ -626,7 +634,6 @@ module minter::odyssey_v2 {
         let addrs_length = vector::length(&addrs);
         assert!(addrs_length == vector::length(&amounts), 0);
 
-        mint_stage::remove_everyone_from_allowlist(owner, odyssey, stage);
         for (i in 0..addrs_length) {
             let addr = *vector::borrow(&addrs, i);
             let amount = *vector::borrow(&amounts, i);
