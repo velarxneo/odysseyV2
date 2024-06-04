@@ -13,7 +13,7 @@ const { OdysseyClient } = require("aptivate-odyssey-sdk");
 const inquirer = require("inquirer");
 const program = new Command();
 
-program.version("2.0.0");
+program.version("2.0.7");
 
 // Initialize an empty config object
 let config: any = {};
@@ -118,7 +118,11 @@ if (arweave === undefined) {
 }
 const keyfilePath = arweave.keyfilePath;
 const aptos = getNetwork(network !== undefined ? network : "testnet");
-const account = getAccount(private_key !== undefined ? private_key : "0x000");
+const account = getAccount(
+  private_key !== undefined
+    ? private_key
+    : "0x0000000000000000000000000000000000000000000000000000000000000000"
+);
 
 // Command to create a odyssey
 program
@@ -231,18 +235,21 @@ program
   .description("Update Odyssey based on config.json ")
   .action(async () => {
     try {
-      await odysseyClient.updateOdyssey(
+      const odyssey = await odysseyClient.getOdyssey(aptos, resource_account);
+
+      const txnHash = await odysseyClient.updateOdyssey(
         aptos,
         resource_account,
         account,
-        odyssey_name,
-        collection_name,
+        odyssey.collection.inner,
         description,
         cover,
         collection_size
       );
+
+      console.log("Transaction Hash: ", txnHash);
     } catch (error: any) {
-      console.error("Error updating whitelist:", error.message);
+      console.error("Error updating odyssey:", error.message);
     }
   });
 
@@ -497,149 +504,164 @@ program
     }
   });
 
-// command to retrieve the trait config list onchain
-program
-  .command("get-trait-config-list")
-  .description("Retrieve trait config list")
-  .action(async () => {
-    try {
-      const traitConfigList = await odysseyClient.getTraitConfigList(
-        aptos,
-        resource_account
-      );
-      console.log("Trait Config List:", traitConfigList);
-    } catch (error: any) {
-      console.error("Error retrieving Trait Config List:", error.message);
-    }
-  });
-
-// command to retrieve all tokenID's traits and respective trait values
-program
-  .command("get-token-trait-values")
-  .description("Retrieve token trait values")
-  .action(async () => {
-    try {
-      const tokenTraitValues = await odysseyClient.getTokenTraitValues(
-        aptos,
-        resource_account
-      );
-      console.log("Token Trait Values:", tokenTraitValues);
-    } catch (error: any) {
-      console.error("Error retrieving Token Trait Values:", error.message);
-    }
-  });
-
 program
   .command("pause-resume-odyssey")
   .description("Pause/resume Odyssey minting")
   .action(async () => {
     try {
-      await odysseyClient.pauseResumeOdyssey(aptos, resource_account, account);
-      const odyssey = await odysseyClient.getOdyssey(aptos, resource_account);
-      console.log("Odyssey paused status: " + odyssey.paused);
+      const answers = await inquirer.prompt([
+        {
+          type: "confirm",
+          name: "paused",
+          message: "Do you want to pause Odyssey?",
+          default: false,
+        },
+      ]);
+
+      const paused = answers.paused;
+
+      await odysseyClient.pauseResumeOdyssey(
+        aptos,
+        resource_account,
+        account,
+        paused
+      );
+      console.log("Odyssey paused status: " + (paused ? "paused" : "resumed"));
     } catch (error: any) {
       console.error("Error pausing/resuming odyssey:", error.message);
     }
   });
 
+// command to retrieve the trait config list onchain
+// program
+//   .command("get-trait-config-list")
+//   .description("Retrieve trait config list")
+//   .action(async () => {
+//     try {
+//       const traitConfigList = await odysseyClient.getTraitConfigList(
+//         aptos,
+//         resource_account
+//       );
+//       console.log("Trait Config List:", traitConfigList);
+//     } catch (error: any) {
+//       console.error("Error retrieving Trait Config List:", error.message);
+//     }
+//   });
+
+// command to retrieve all tokenID's traits and respective trait values
+// program
+//   .command("get-token-trait-values")
+//   .description("Retrieve token trait values")
+//   .action(async () => {
+//     try {
+//       const tokenTraitValues = await odysseyClient.getTokenTraitValues(
+//         aptos,
+//         resource_account
+//       );
+//       console.log("Token Trait Values:", tokenTraitValues);
+//     } catch (error: any) {
+//       console.error("Error retrieving Token Trait Values:", error.message);
+//     }
+//   });
+
 // command to generate a tokenID's trait values randomly based on config list
 // need to set tokenID and send to move contract as parameter
-program
-  .command("generate-token-random-traits")
-  .description("Generate token random traits")
-  .action(async () => {
-    try {
-      const token_no_prompt = await inquirer.prompt([
-        {
-          type: "number",
-          name: "token_no",
-          message: "Enter the token no.:",
-          validate: (value: number) => {
-            if (value <= 0) {
-              return "Please enter a valid number.";
-            }
-            return true;
-          },
-        },
-      ]);
-      const txnHash = await odysseyClient.generateTokenRandomTraits(
-        aptos,
-        account,
-        resource_account,
-        token_no_prompt.token_no
-      );
-      console.log("Transaction Hash: ", txnHash);
-    } catch (error: any) {
-      console.error("Error Generating Token Random Traits:", error.message);
-    }
-  });
+// program
+//   .command("generate-token-random-traits")
+//   .description("Generate token random traits")
+//   .action(async () => {
+//     try {
+//       const token_no_prompt = await inquirer.prompt([
+//         {
+//           type: "number",
+//           name: "token_no",
+//           message: "Enter the token no.:",
+//           validate: (value: number) => {
+//             if (value <= 0) {
+//               return "Please enter a valid number.";
+//             }
+//             return true;
+//           },
+//         },
+//       ]);
+//       const txnHash = await odysseyClient.generateTokenRandomTraits(
+//         aptos,
+//         account,
+//         resource_account,
+//         token_no_prompt.token_no
+//       );
+//       console.log("Transaction Hash: ", txnHash);
+//     } catch (error: any) {
+//       console.error("Error Generating Token Random Traits:", error.message);
+//     }
+//   });
 
 // command to generate all image files and metadata json files
-program
-  .command("generate-all-img-json-files")
-  .description("Generate all image and metadata json files")
-  .action(async () => {
-    try {
-      const token_no_prompt = await inquirer.prompt([
-        {
-          type: "number",
-          name: "token_no",
-          message: "Enter the token no.:",
-          validate: (value: number) => {
-            if (value <= 0) {
-              return "Please enter a valid number.";
-            }
-            return true;
-          },
-        },
-      ]);
-      const tokenTraitValues = await odysseyClient.generateImageJsonFiles(
-        aptos,
-        resource_account,
-        token_no_prompt.token_no
-      );
-      console.log("Token Trait Values:", tokenTraitValues);
-    } catch (error: any) {
-      console.error(
-        "Error generating Image and Metadata Json Files:",
-        error.message
-      );
-    }
-  });
+// program
+//   .command("generate-all-img-json-files")
+//   .description("Generate all image and metadata json files")
+//   .action(async () => {
+//     try {
+//       const token_no_prompt = await inquirer.prompt([
+//         {
+//           type: "number",
+//           name: "token_no",
+//           message: "Enter the token no.:",
+//           validate: (value: number) => {
+//             if (value <= 0) {
+//               return "Please enter a valid number.";
+//             }
+//             return true;
+//           },
+//         },
+//       ]);
+//       const tokenTraitValues = await odysseyClient.generateImageJsonFiles(
+//         aptos,
+//         resource_account,
+//         token_no_prompt.token_no
+//       );
+//       console.log("Token Trait Values:", tokenTraitValues);
+//     } catch (error: any) {
+//       console.error(
+//         "Error generating Image and Metadata Json Files:",
+//         error.message
+//       );
+//     }
+//   });
 
 // command to populate the trait config list onchain
-program
-  .command("populate-trait-config-list")
-  .description("Populate trait config list")
-  .action(async () => {
-    try {
-      const txnHash = await odysseyClient.populateTraitConfigList(
-        aptos,
-        account,
-        resource_account,
-        asset_dir
-      );
-      //console.log('Transaction Hash: ', txnHash);
-    } catch (error: any) {
-      console.error("Error populating trait configs:", error.message);
-    }
-  });
+// program
+//   .command("populate-trait-config-list")
+//   .description("Populate trait config list")
+//   .action(async () => {
+//     try {
+//       const txnHash = await odysseyClient.populateTraitConfigList(
+//         aptos,
+//         account,
+//         resource_account,
+//         asset_dir
+//       );
+//       //console.log('Transaction Hash: ', txnHash);
+//     } catch (error: any) {
+//       console.error("Error populating trait configs:", error.message);
+//     }
+//   });
 
 // Command to create trait_config.json file based on folder structure
-program
-  .command("create-random-trait-config-json")
-  .description("Create random trait config json")
-  .action(async () => {
-    try {
-      let txnHash = await odysseyClient.createRandomTraitConfigJSONFile(
-        asset_dir
-      );
-      console.log("Transaction Hash: ", txnHash);
-      console.log("Successful creation of randomized trait config json file.");
-    } catch (error: any) {
-      console.error("Error creating Random Trait Config JSON File:", error);
-    }
-  });
+// program
+//   .command("create-random-trait-config-json")
+//   .description("Create random trait config json")
+//   .action(async () => {
+//     try {
+//       let txnHash = await odysseyClient.createRandomTraitConfigJSONFile(
+//         asset_dir
+//       );
+//       console.log("Transaction Hash: ", txnHash);
+//       console.log("Successful creation of randomized trait config json file.");
+//     } catch (error: any) {
+//       console.error("Error creating Random Trait Config JSON File:", error);
+//     }
+//   });
 
 function getNetwork(network: string): Aptos {
   let selectedNetwork = Network.DEVNET;

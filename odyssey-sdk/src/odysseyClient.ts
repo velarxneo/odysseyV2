@@ -470,8 +470,7 @@ export class OdysseyClient {
     aptos: Aptos,
     resource_account: string,
     account: Account,
-    odyssey_name: string,
-    collection_name: string,
+    collection_address: string,
     description: string,
     cover: string,
     collection_size: number
@@ -482,11 +481,10 @@ export class OdysseyClient {
       const txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
-          function: `${moduleAddressName}::update_odyssey`,
+          function: `${moduleAddressName}::update_odyssey_mint_data`,
           functionArguments: [
             resource_account,
-            odyssey_name,
-            collection_name,
+            collection_address,
             description,
             cover,
             collection_size,
@@ -614,15 +612,19 @@ export class OdysseyClient {
   async pauseResumeOdyssey(
     aptos: Aptos,
     resource_account: string,
-    account: Account
+    account: Account,
+    pause: boolean
   ) {
     try {
       console.log("\n=== Pause/Resume odyssey ===\n");
       const txn = await aptos.transaction.build.simple({
         sender: account.accountAddress,
         data: {
-          function: `${moduleAddressName}::pause_resume_mint`,
-          functionArguments: [resource_account],
+          function: `${moduleAddressName}::set_paused`,
+          functionArguments: [
+            resource_account,
+            pause
+          ],
         },
       });
 
